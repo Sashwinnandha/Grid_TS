@@ -1,5 +1,4 @@
 import React, {
-  lazy,
   useCallback,
   useEffect,
   useMemo,
@@ -13,16 +12,11 @@ import { CellType, MoveBlockFunction } from "./Cell";
 import addLocalStorage from "./LocalStorage";
 import DisplayGrid from "./DisplayGrid";
 
-const GridLazy=lazy(()=>import("./DisplayGrid"))
-
 const App: React.FC = () => {
   const [open, setOpen] = useState({
     new: false,
     update: false,
   });
-  const [grid, setGrid] = useState<any>(
-    JSON.parse(localStorage.getItem("blocks") || "[]")
-  );
   const [rows, setRows] = useState<number>(
     Number(localStorage.getItem("rows")) || 0
   );
@@ -38,83 +32,99 @@ const App: React.FC = () => {
   const gridRef = useRef<any>(
     JSON.parse(localStorage.getItem("blocks") || "[]")
   );
+  const [gridVersion, setGridVersion] = useState<number>(0);
 
-  const rowref = useRef<number>();
-  const colRef = useRef<number>();
+  const rowref = useRef<number>(Number(localStorage.getItem("rows")) || 0);
+  const colRef = useRef<number>(Number(localStorage.getItem("columns")) || 0);
 
-  const rowHeader = useRef<number>();
-  const colHeader = useRef<number>();
+  const rowHeader = useRef<number>(
+    Number(localStorage.getItem("rowHeader")) || 0
+  );
+  const colHeader = useRef<number>(
+    Number(localStorage.getItem("colHeader")) || 0
+  );
+
+  const missingBlocks = useRef<any>([]);
 
   const handleOpen = (key: any) =>
     setOpen((prev) => ({ ...prev, [key]: true }));
   const handleClose = () => setOpen({ new: false, update: false });
 
   const handleGridCreate = useCallback(() => {
-    var newGrid = [];
-    newGrid = Array.from({ length: rows }, () => Array(columns).fill(null));
+    gridRef.current = Array.from({ length: rows }, () =>
+      Array(columns).fill(null)
+    );
 
     // Set column headers (even numbers)
     for (let i = 0; i < columns; i++) {
-      newGrid[0][i] = {
+      gridRef.current[0][i] = {
         id: `A${i * 2}`,
         text: `A${i * 2}`,
       }; // Even numbers for columns (A0, A2, A4, ...)
     }
 
-
     // Set row headers (odd numbers)
     for (let i = 0; i < rows; i++) {
-      newGrid[i][0] = {
+      gridRef.current[i][0] = {
         id: `B${i * 2 + 1}`,
         text: `B${i * 2 + 1}`,
       }; // Odd numbers for rows (B1, B3, B5, ...)
       rowref.current = rows;
       colRef.current = columns;
-      gridRef.current = newGrid;
       rowHeader.current = rows;
       colHeader.current = columns;
-      setGrid(newGrid);
-      addLocalStorage("blocks", newGrid);
+      addLocalStorage("rowHeader", rowHeader.current);
+      addLocalStorage("colHeader", colHeader.current);
+      addLocalStorage("blocks", gridRef.current);
       setAction(null);
+      setGridVersion((prev) => prev + 1);
     }
-  },[rows,columns]);
+  }, [rows, columns]);
 
-
-  const handleUpdateGrid=useCallback(()=> {
-    let newGrid = JSON.parse(JSON.stringify(grid));
+  const handleUpdateGrid = useCallback(() => {
     let addedRows = rows - (rowref.current || 0);
     let addedColumns = columns - (colRef.current || 0);
 
-    console.log(addedRows + "-" + addedColumns);
     if (addedRows === 0 && addedColumns === 0) return;
     if (addedRows > 0) {
       for (let i = 0; i < addedRows; i++) {
-        newGrid.push(new Array(newGrid[0].length).fill(null)); // Fill with 0 or any default value
-        newGrid[(rowref.current || 0) + i][0] = {
+        gridRef.current.push(new Array(gridRef.current[0].length).fill(null)); // Fill with 0 or any default value
+        gridRef.current[(rowref.current || 0) + i][0] = {
           id: `B${((rowHeader.current || 0) + i) * 2 + 1}`,
           text: `B${((rowHeader.current || 0) + i) * 2 + 1}`,
         };
       }
-    } else {
+    } else if (addedRows < 0) {
+      const lastRowElements = gridRef.current[gridRef.current.length - 1];
+
+      for (let each of lastRowElements) {
+        addMissingBlocks(each);
+      }
       for (let i = addedRows; i < 0; i++) {
-        newGrid.pop();
+        gridRef.current.pop();
       }
     }
 
     if (addedColumns > 0) {
-      for (let i = 0; i < newGrid.length; i++) {
+      for (let i = 0; i < gridRef.current.length; i++) {
         for (let j = 0; j < addedColumns; j++) {
-          newGrid[i].push(null); // Fill with 0 or any default value
-          newGrid[0][(colRef.current || 0) + j] = {
+          gridRef.current[i].push(null); // Fill with 0 or any default value
+          gridRef.current[0][(colRef.current || 0) + j] = {
             id: `A${((colHeader.current || 0) + j) * 2}`,
             text: `A${((colHeader.current || 0) + j) * 2}`,
           };
         }
       }
     } else if (addedColumns < 0) {
-      for (let i = 0; i < newGrid.length; i++) {
+      const lastColumnElements = gridRef.current.map(
+        (row: any) => row[row.length - 1]
+      );
+      for (let each of lastColumnElements) {
+        addMissingBlocks(each);
+      }
+      for (let i = 0; i < gridRef.current.length; i++) {
         for (let j = addedColumns; j < 0; j++) {
-          newGrid[i].pop();
+          gridRef.current[i].pop();
         }
       }
     }
@@ -122,90 +132,56 @@ const App: React.FC = () => {
     colRef.current = columns;
     rowHeader.current = (rowHeader.current || 0) + addedRows;
     colHeader.current = (colHeader.current || 0) + addedColumns;
-    setGrid(newGrid);
-    addLocalStorage("blocks", newGrid);
+    addLocalStorage("rowHeader", rowHeader.current);
+    addLocalStorage("colHeader", colHeader.current);
+    addLocalStorage("blocks", gridRef.current);
     setAction(null);
-  },[rows,columns]);
+    setGridVersion((prev) => prev + 1);
+  }, [rows, columns]);
 
   useEffect(() => {
-    let newGridBlocks: any = [];
-    let oldGridBlocks: any = [];
-    for (let i = 0; i < grid.length; i++) {
-      for (let j = 0; j < grid[i].length; j++) {
-        if (typeof grid[i][j] === "object" && grid[i][j] !== null) {
-          const { id } = grid[i][j];
-
-          // Check if the id does NOT start with "A" or "B"
-          if (id && !(id.startsWith("A") || id.startsWith("B"))) {
-            newGridBlocks.push(grid[i][j].id);
-          }
-        }
-      }
-    }
-    for (let i = 0; i < gridRef.current.length; i++) {
-      for (let j = 0; j < gridRef.current[i].length; j++) {
-        if (
-          typeof gridRef.current[i][j] === "object" &&
-          gridRef.current[i][j] !== null
-        ) {
-          const { id } = gridRef.current[i][j];
-          if (id && !(id.startsWith("A") || id.startsWith("B"))) {
-            oldGridBlocks.push(gridRef.current[i][j].id);
-          }
-        }
-      }
-    }
-
-    const missedBlocks = oldGridBlocks.filter((each: any) => {
-      if (!newGridBlocks.includes(each)) {
-        return each;
-      }
-    });
-
-    if (missedBlocks.length > 0) {
-      for (let each of missedBlocks) {
+    if (missingBlocks.current.length > 0) {
+      for (let each of missingBlocks.current) {
         const newBlocks = { ...blocks };
-        const blockId = each;
+        const blockId = each.id;
         newBlocks[blockId] = {
           id: blockId,
           text: `Block ${blockId.split("_")[1]}`,
         };
         setBlocks(newBlocks);
-        addBlockToGrid(grid, each);
+        addBlockToGrid(gridRef.current, each.id);
       }
     }
-    gridRef.current = grid;
-    addLocalStorage("blocks", grid);
-  }, [grid]);
+    addLocalStorage("blocks", gridRef.current);
+    missingBlocks.current = [];
+  }, [missingBlocks.current]);
 
-    //for 3 consecutive spaces
-    const findSpaces=useCallback(()=>{
-      let find: any = [];
-      for (let i = 0; i < rows; i++) {
-        var count = 0;
-        for (let j = 0; j < columns; j++) {
-          if (grid[i][j] === null) {
-            ++count;
-          } else {
-            count = 0;
-          }
-  
-          if (count === 3) {
-            find = [i, j - 2];
-            break;
-          }
+  //for 3 consecutive spaces
+  const findSpaces = useCallback(() => {
+    let find: any = [];
+    for (let i = 0; i < rows; i++) {
+      var count = 0;
+      for (let j = 0; j < columns; j++) {
+        if (gridRef.current[i][j] === null) {
+          ++count;
+        } else {
+          count = 0;
         }
-        if (find.length > 0) {
+
+        if (count === 3) {
+          find = [i, j - 2];
           break;
         }
       }
-      return find;
-    },[items])
+      if (find.length > 0) {
+        break;
+      }
+    }
+    return find;
+  }, [items]);
 
   const addItem = (itemType: string) => {
     let counts = handleCount;
-
-    const newGrid = [...grid];
     const blockCount =
       itemType === "item1"
         ? 1
@@ -213,7 +189,9 @@ const App: React.FC = () => {
         ? 3
         : itemType === "item3"
         ? 4
-        : itemType==="item4"?3:0;
+        : itemType === "item4"
+        ? 3
+        : 0;
     if (Array.isArray(blockCount)) {
       counts += 3;
     } else {
@@ -239,21 +217,18 @@ const App: React.FC = () => {
         id: blockId,
         text: `Block ${blockId.split("_")[1]}`,
       };
-      if(itemType==="item4"&&find.length>0){
-        grid[find[0]][find[1] + i] = { id: blockId, text: blockId };
-      }else{
-      addBlockToGrid(newGrid, blockId);
+      if (itemType === "item4" && find.length > 0) {
+        gridRef.current[find[0]][find[1] + i] = { id: blockId, text: blockId };
+      } else {
+        addBlockToGrid(gridRef.current, blockId);
       }
     }
     setItems((prev) => [...prev, itemType]);
     addLocalStorage("items", [...items, itemType]);
-    addLocalStorage("blocks", newGrid);
+    addLocalStorage("blocks", gridRef.current);
     setBlocks(newBlocks);
-    gridRef.current = newGrid;
-    setGrid(newGrid);
+    setGridVersion((prev) => prev + 1);
   };
-
-
 
   const addBlockToGrid = (grid: CellType[][], blockId: string) => {
     for (let i = 0; i < rows; i++) {
@@ -266,31 +241,27 @@ const App: React.FC = () => {
     }
   };
 
-  const moveBlock: MoveBlockFunction = useCallback(
-    (id, toRow, toCol) => {
-      const newGrid = [...grid];
-      const fromPos = getBlockPosition(id);
+  const moveBlock: MoveBlockFunction = (id, toRow, toCol) => {
+    const fromPos = getBlockPosition(id);
 
-      // Prevent moving to the same position
-      if (fromPos[0] === toRow && fromPos[1] === toCol) return;
+    // Prevent moving to the same position
+    if (fromPos[0] === toRow && fromPos[1] === toCol) return;
 
-      // Check if the target cell is already occupied
-      if (newGrid[toRow][toCol] === null) {
-        newGrid[toRow][toCol] = newGrid[fromPos[0]][fromPos[1]];
-        newGrid[fromPos[0]][fromPos[1]] = null;
-      } else {
-        alert("Target cell is already occupied!");
-      }
-      addLocalStorage("blocks", newGrid);
-      setGrid(newGrid);
-    },
-    [grid]
-  );
+    // Check if the target cell is already occupied
+    if (gridRef.current[toRow][toCol] === null) {
+      gridRef.current[toRow][toCol] = gridRef.current[fromPos[0]][fromPos[1]];
+      gridRef.current[fromPos[0]][fromPos[1]] = null;
+    } else {
+      alert("Target cell is already occupied!");
+    }
+    addLocalStorage("blocks", gridRef.current);
+    setGridVersion((prev) => prev + 1);
+  };
 
   const getBlockPosition = (id: string): [number, number] => {
     for (let i = 0; i < rows; i++) {
       for (let j = 0; j < columns; j++) {
-        if (grid[i][j] && grid[i][j].id === id) {
+        if (gridRef.current[i][j] && gridRef.current[i][j].id === id) {
           return [i, j];
         }
       }
@@ -306,18 +277,20 @@ const App: React.FC = () => {
       if (each === "item4") return count + 3;
       return count;
     }, 0);
-  }, [items, grid]);
+  }, [items, gridRef.current]);
 
   const handleReset = () => {
     setItems([]);
-    setGrid([]);
     setBlocks({});
     gridRef.current = [];
+    setGridVersion(0);
     addLocalStorage("blocks", []);
     addLocalStorage("items", []);
     addLocalStorage("count", 0);
     addLocalStorage("rows", 0);
     addLocalStorage("columns", 0);
+    addLocalStorage("rowHeader", 0);
+    addLocalStorage("colHeader", 0);
   };
 
   const handleForm = (e: any) => {
@@ -341,6 +314,8 @@ const App: React.FC = () => {
       setRows(rowChange + 1); // +1 to account for header row
       setColumns(colChange + 1); // +1 to account for header column
       setAction("create");
+      addLocalStorage("rows", rowChange + 1);
+      addLocalStorage("columns", colChange + 1);
     } else {
       let count = handleCount;
 
@@ -351,10 +326,23 @@ const App: React.FC = () => {
         setRows((prev) => prev + rowChange); // Increment current rows
         setColumns((prev) => prev + colChange); // Increment current columns
         setAction("update");
+        addLocalStorage("rows", rows + rowChange);
+        addLocalStorage("columns", columns + colChange);
       }
     }
     handleClose(); // Close the dialog
   };
+
+  function addMissingBlocks(box: CellType) {
+    if (typeof box === "object" && box !== null) {
+      const { id } = box;
+
+      // Check if the id does NOT start with "A" or "B"
+      if (id && !(id.startsWith("A") || id.startsWith("B"))) {
+        missingBlocks.current.push(box);
+      }
+    }
+  }
 
   useEffect(() => {
     if (action === "create") {
@@ -365,7 +353,6 @@ const App: React.FC = () => {
   }, [action]);
 
   const handleChange = (label: string, index: number) => {
-    const newGrid = grid.map((row: any) => [...row]); // Create a deep copy of the grid
     const count = handleCount;
 
     if (label.startsWith("B")) {
@@ -376,8 +363,8 @@ const App: React.FC = () => {
         alert("Can't convert rows-column as it will remove blocks");
         return;
       } else {
-        const rowToAdd = newGrid[index]; // Select the row to convert
-        newGrid.splice(index, 1); // Remove the row
+        const rowToAdd = gridRef.current[index]; // Select the row to convert
+        gridRef.current.splice(index, 1); // Remove the row
 
         if (rowToAdd[0] && typeof rowToAdd[0].id === "string") {
           rowToAdd[0].id = rowToAdd[0].id.replace("B", "A"); // Ensure rowToAdd[0].id is a string
@@ -386,16 +373,17 @@ const App: React.FC = () => {
         // Determine the insert position for the new column
         let insertPosition = 1;
 
-        for (let i = 0; i < newGrid[0].length; i++) {
-          const currentId = newGrid[0][i]?.id;
+        for (let i = 0; i < gridRef.current[0].length; i++) {
+          const currentId = gridRef.current[0][i]?.id;
           if (typeof currentId === "string") {
             const currentValue = Number(currentId.replace("A", ""));
             const newValue = Number(rowToAdd[0].id.replace("A", ""));
 
             if (
               newValue > currentValue &&
-              (i === newGrid[0].length - 1 ||
-                newValue < Number(newGrid[0][i + 1]?.id?.replace("A", "")))
+              (i === gridRef.current[0].length - 1 ||
+                newValue <
+                  Number(gridRef.current[0][i + 1]?.id?.replace("A", "")))
             ) {
               insertPosition = i + 1; // Set insert position
               break;
@@ -404,12 +392,16 @@ const App: React.FC = () => {
         }
 
         // Add the row as a new column
-        for (let i = 0; i < newGrid.length; i++) {
-          newGrid[i].splice(
+        for (let i = 0; i < gridRef.current.length; i++) {
+          gridRef.current[i].splice(
             insertPosition,
             0,
             rowToAdd[i] !== undefined ? rowToAdd[i] : null
           );
+        }
+
+        if (rowToAdd[rowToAdd.length - 1] !== null) {
+          addMissingBlocks(rowToAdd[rowToAdd.length - 1]);
         }
 
         // Update grid and dimensions
@@ -428,8 +420,8 @@ const App: React.FC = () => {
         alert("Can't convert column-row as it will remove blocks");
         return;
       } else {
-        const colToAdd = newGrid.map((row: any) => row[index]); // Extract the column to add
-        newGrid.forEach((row: any) => row.splice(index, 1)); // Remove the column
+        const colToAdd = gridRef.current.map((row: any) => row[index]); // Extract the column to add
+        gridRef.current.forEach((row: any) => row.splice(index, 1)); // Remove the column
 
         if (colToAdd[0] && typeof colToAdd[0].id === "string") {
           colToAdd[0].id = colToAdd[0].id.replace("A", "B"); // Ensure colToAdd[0].id is a string
@@ -438,16 +430,17 @@ const App: React.FC = () => {
         // Determine the insert position for the new row
         let insertPosition = 0;
 
-        for (let i = 0; i < newGrid.length; i++) {
-          const currentId = newGrid[i][0]?.id;
+        for (let i = 0; i < gridRef.current.length; i++) {
+          const currentId = gridRef.current[i][0]?.id;
           if (typeof currentId === "string") {
             const currentValue = Number(currentId.replace("B", ""));
             const newValue = Number(colToAdd[0].id.replace("B", ""));
 
             if (
               newValue > currentValue &&
-              (i === newGrid.length - 1 ||
-                newValue < Number(newGrid[i + 1][0]?.id?.replace("B", "")))
+              (i === gridRef.current.length - 1 ||
+                newValue <
+                  Number(gridRef.current[i + 1][0]?.id?.replace("B", "")))
             ) {
               insertPosition = i + 1; // Set insert position
               break;
@@ -460,11 +453,13 @@ const App: React.FC = () => {
         for (let i = 0; i < colToAdd.length; i++) {
           if (i < newRow.length) {
             newRow[i] = colToAdd[i]; // Fill the new row with column values
+          } else {
+            addMissingBlocks(colToAdd[i]);
           }
         }
 
         // Insert the new row at the determined position
-        newGrid.splice(insertPosition, 0, newRow); // Add the new row to the grid
+        gridRef.current.splice(insertPosition, 0, newRow); // Add the new row to the grid
 
         // Update grid dimensions
         rowref.current = rows + 1;
@@ -475,8 +470,8 @@ const App: React.FC = () => {
         addLocalStorage("columns", columns - 1);
       }
     }
-    setGrid(newGrid);
-    addLocalStorage("blocks", newGrid);
+    setGridVersion((prev) => prev + 1);
+    addLocalStorage("blocks", gridRef.current);
   };
 
   return (
@@ -490,7 +485,7 @@ const App: React.FC = () => {
         moveBlock={moveBlock}
         addItem={addItem}
         items={items}
-        grid={grid}
+        grid={gridRef.current}
         open={open}
       />
     </DndProvider>

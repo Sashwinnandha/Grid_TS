@@ -28,7 +28,6 @@ const Cell: React.FC<CellProps> = React.memo(({ rowIndex, colIndex, cell, moveBl
       isOver: monitor.isOver(),
     }),
   });
-  console.log(rowIndex+"/"+colIndex)
 
   return (
     <div
