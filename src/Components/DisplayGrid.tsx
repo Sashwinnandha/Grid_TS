@@ -10,8 +10,8 @@ interface Display {
   handleChange: (cell: string, index: number) => void;
   handleReset: () => void;
   moveBlock: (id:string,toCol:number,toRow:number) => void;
-  addItem: (s: string) => void;
-  items:string[];
+  addItem: (s: string,n:number) => void;
+  items:{};
   grid: any;
   open:{
     new:boolean,
@@ -30,6 +30,7 @@ const DisplayGrid: React.FC<Display> = ({
   items,
   open
 }) => {
+  const itemsArr=Object.keys(items).map((each:string)=>each.split("_")[0]);
   return (
     <div
       style={{
@@ -82,8 +83,8 @@ const DisplayGrid: React.FC<Display> = ({
         >
           <div style={{ marginBottom: "20px" }}>
             <Button
-              onClick={() => addItem("item1")}
-              disabled={items.includes("item1")}
+              onClick={() => addItem("item1",1)}
+              disabled={itemsArr.includes("i1")}
               variant="contained"
               sx={{ margin: "0px 20px" }}
             >
@@ -91,8 +92,8 @@ const DisplayGrid: React.FC<Display> = ({
               (1 Block)
             </Button>
             <Button
-              onClick={() => addItem("item2")}
-              disabled={items.includes("item2")}
+              onClick={() => addItem("item2",3)}
+              disabled={itemsArr.includes("i2")}
               variant="contained"
               sx={{ margin: "0px 20px" }}
             >
@@ -100,8 +101,8 @@ const DisplayGrid: React.FC<Display> = ({
               (3 Blocks)
             </Button>
             <Button
-              onClick={() => addItem("item3")}
-              disabled={items.includes("item3")}
+              onClick={() => addItem("item3",4)}
+              disabled={itemsArr.includes("i3")}
               variant="contained"
               sx={{ margin: "0px 20px" }}
             >
@@ -109,8 +110,8 @@ const DisplayGrid: React.FC<Display> = ({
               (4 Blocks)
             </Button>
             <Button
-              onClick={() => addItem("item4")}
-              disabled={items.includes("item4")}
+              onClick={() => addItem("item4",3)}
+              disabled={itemsArr.includes("i4")}
               variant="contained"
               sx={{ margin: "0px 20px" }}
             >
