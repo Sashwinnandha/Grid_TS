@@ -29,15 +29,12 @@ const App: React.FC = () => {
   const rowref = useRef<number>(Number(localStorage.getItem("rows")) || 0);
   const colRef = useRef<number>(Number(localStorage.getItem("columns")) || 0);
 
-  const rowHeader = useRef<number>(
-    Number(localStorage.getItem("rowHeader")) || 0
-  );
-  const colHeader = useRef<number>(
-    Number(localStorage.getItem("colHeader")) || 0
-  );
+  const rowArrH = useRef<number[]>([]);
+
+  const colArrH = useRef<number[]>([]);
 
   const missingBlocks = useRef<any>([]);
- 
+
   useEffect(() => {
     if (missingBlocks.current.length > 0) {
       for (let each of missingBlocks.current) {
@@ -83,6 +80,7 @@ const App: React.FC = () => {
         id: `A${i * 2}`,
         text: `A${i * 2}`,
       }; // Even numbers for columns (A0, A2, A4, ...)
+      colArrH.current.push(i * 2);
     }
 
     // Set row headers (odd numbers)
@@ -91,17 +89,92 @@ const App: React.FC = () => {
         id: `B${i * 2 + 1}`,
         text: `B${i * 2 + 1}`,
       }; // Odd numbers for rows (B1, B3, B5, ...)
-      rowref.current = inputData.rows;
-      colRef.current = inputData.columns;
-      rowHeader.current = inputData.rows;
-      colHeader.current = inputData.columns;
-      addLocalStorage("rowHeader", rowHeader.current);
-      addLocalStorage("colHeader", colHeader.current);
-      addLocalStorage("grid", gridRef.current);
-      setAction(null);
-      setGridVersion((prev) => prev + 1);
+      rowArrH.current.push(i * 2 + 1);
     }
+    rowref.current = inputData.rows;
+    colRef.current = inputData.columns;
+    addLocalStorage("rowHeader", rowArrH.current);
+    addLocalStorage("colHeader", colArrH.current);
+    addLocalStorage("grid", gridRef.current);
+    setAction(null);
+    setGridVersion((prev) => prev + 1);
   }, [inputData.rows, inputData.columns]);
+
+  const findMissingOddNumbers = () => {
+    let missingNumber: number = 0;
+    const min = Math.min(...rowArrH.current);
+    let combinedArr=[...rowArrH.current,...colArrH.current]
+    const max = Math.max(...combinedArr.filter(num => num % 2 !== 0));
+    console.log(max)
+    let position= 0;
+
+    for (let i = min; i <= max; i++) {
+      if (i % 2 !== 0 && !rowArrH.current.includes(i)&&!colArrH.current.includes(i)) {
+        rowArrH.current.push(i);
+        rowArrH.current.sort((a, b) => a - b);
+        missingNumber = i - 2;
+      }
+    }
+    
+
+    if (missingNumber === 0) {
+      // if(colMax>max&&colMax%2!==0){
+      //   missingNumber=colMax;
+      //   rowArrH.current.push(missingNumber);
+      //   position=rowArrH.current.findIndex((each:number)=>each===missingNumber)
+      // }else{
+      missingNumber =max;
+      console.log(missingNumber)
+      rowArrH.current.push(max+2);
+      console.log("row"+rowArrH.current)
+      position=rowArrH.current.findIndex((each:number)=>each===missingNumber+2);
+//    }
+  }else{
+    console.log(rowArrH.current)
+    console.log(missingNumber)
+    position=rowArrH.current.findIndex((each:number)=>each===missingNumber)+1
+  }
+
+    return {missingNumber,position};
+  };
+
+  const findMissingEvenNumbers = () => {
+    let missingNumber: number = 0;
+    const min = Math.min(...colArrH.current);
+    let combinedArr=[...rowArrH.current,...colArrH.current]
+    const max = Math.max(...combinedArr.filter(num => num % 2 === 0));
+    console.log(max)
+    let position= 0;
+
+    for (let i = min; i <= max; i++) {
+      if (i % 2 === 0 && !rowArrH.current.includes(i)&&!colArrH.current.includes(i)) {
+        colArrH.current.push(i);
+        colArrH.current.sort((a, b) => a - b);
+        missingNumber = i - 2;
+      }
+    }
+    
+
+    if (missingNumber === 0) {
+      // if(colMax>max&&colMax%2!==0){
+      //   missingNumber=colMax;
+      //   rowArrH.current.push(missingNumber);
+      //   position=rowArrH.current.findIndex((each:number)=>each===missingNumber)
+      // }else{
+      missingNumber =max;
+      console.log(missingNumber)
+      colArrH.current.push(max+2);
+      console.log("col"+colArrH.current)
+      position=colArrH.current.findIndex((each:number)=>each===missingNumber+2);
+//    }
+  }else{
+    console.log(colArrH.current)
+    console.log(missingNumber)
+    position=colArrH.current.findIndex((each:number)=>each===missingNumber)+1
+  }
+
+    return {missingNumber,position};
+  };
 
   const handleUpdateGrid = useCallback(() => {
     let addedRows = inputData.rows - (rowref.current || 0);
@@ -110,10 +183,17 @@ const App: React.FC = () => {
     if (addedRows === 0 && addedColumns === 0) return;
     if (addedRows > 0) {
       for (let i = 0; i < addedRows; i++) {
-        gridRef.current.push(new Array(gridRef.current[0].length).fill(null)); // Fill with 0 or any default value
-        gridRef.current[(rowref.current || 0) + i][0] = {
-          id: `B${((rowHeader.current || 0) + i) * 2 + 1}`,
-          text: `B${((rowHeader.current || 0) + i) * 2 + 1}`,
+        let {missingNumber,position} = findMissingOddNumbers();
+        console.log(position)
+        let rowToAdd=new Array(gridRef.current[0].length).fill(null);
+          gridRef.current.splice(
+            position,
+            0,
+            rowToAdd
+          );
+        gridRef.current[position][0] = {
+          id: `B${(missingNumber || 0) + 2}`,
+          text: `B${(missingNumber || 0) + 2}`,
         };
       }
     } else if (addedRows < 0) {
@@ -123,44 +203,66 @@ const App: React.FC = () => {
         addMissingBlocks(each);
       }
       for (let i = addedRows; i < 0; i++) {
-        gridRef.current.pop();
+        let find = gridRef.current.pop();
+        if (Number(find[0].id.slice(1)) % 2 !== 0) {
+          rowArrH.current = rowArrH.current.filter(
+            (each: number) => each !== Number(find[0].id.slice(1))
+          );
+        } else {
+          colArrH.current = colArrH.current.filter(
+            (each: number) => each !== Number(find[0].id.slice(1))
+          );
+        }
       }
     }
 
     if (addedColumns > 0) {
+      let {missingNumber,position} = findMissingEvenNumbers();
       for (let i = 0; i < gridRef.current.length; i++) {
         for (let j = 0; j < addedColumns; j++) {
-          gridRef.current[i].push(null); // Fill with 0 or any default value
-          gridRef.current[0][(colRef.current || 0) + j] = {
-            id: `A${((colHeader.current || 0) + j) * 2}`,
-            text: `A${((colHeader.current || 0) + j) * 2}`,
-          };
+            gridRef.current[i].splice(
+              position,
+              0,
+              null
+            );
+          }
+          gridRef.current[0][(position || 0)] = {
+            id: `A${(missingNumber || 0) + 2}`,
+            text: `A${(missingNumber || 0) + 2}`,
         }
       }
     } else if (addedColumns < 0) {
-      const lastColumnElements = gridRef.current.map(
-        (row: any) => row[row.length - 1]
-      );
-      for (let each of lastColumnElements) {
-        addMissingBlocks(each);
+      const lastColumnElements = gridRef.current.map((row: any) => row[row.length - 1]);
+      
+      for (const element of lastColumnElements) {
+        addMissingBlocks(element);
       }
+    
       for (let i = 0; i < gridRef.current.length; i++) {
-        for (let j = addedColumns; j < 0; j++) {
-          gridRef.current[i].pop();
+        for (let j = 0; j < Math.abs(addedColumns); j++) {
+          const found = gridRef.current[i].pop();
+          console.log(found);
+          
+          if (found) { // Check if found is not undefined
+            const idNumber = Number(found.id.slice(1));
+            if (idNumber % 2 !== 0) {
+              rowArrH.current = rowArrH.current.filter((each: number) => each !== idNumber);
+            } else {
+              colArrH.current = colArrH.current.filter((each: number) => each !== idNumber);
+            }
+          }
         }
       }
     }
+    
     rowref.current = inputData.rows;
     colRef.current = inputData.columns;
-    rowHeader.current = (rowHeader.current || 0) + addedRows;
-    colHeader.current = (colHeader.current || 0) + addedColumns;
-    addLocalStorage("rowHeader", rowHeader.current);
-    addLocalStorage("colHeader", colHeader.current);
+    addLocalStorage("rowHeader", rowArrH.current);
+    addLocalStorage("colHeader", colArrH.current);
     addLocalStorage("grid", gridRef.current);
     setAction(null);
     setGridVersion((prev) => prev + 1);
   }, [inputData.rows, inputData.columns]);
-
 
   //for 3 consecutive spaces
   const findSpaces = useCallback(() => {
@@ -333,7 +435,6 @@ const App: React.FC = () => {
     }
   }
 
-
   const handleChange = (label: string, index: number) => {
     const count = Object.keys(blockRef.current).length;
 
@@ -348,8 +449,11 @@ const App: React.FC = () => {
         const rowToAdd = gridRef.current[index]; // Select the row to convert
         gridRef.current.splice(index, 1); // Remove the row
 
+        let rowNumber=0;
+
         if (rowToAdd[0] && typeof rowToAdd[0].id === "string") {
           rowToAdd[0].id = rowToAdd[0].id.replace("B", "A"); // Ensure rowToAdd[0].id is a string
+          rowNumber=Number(rowToAdd[0].id.replace("A",""));
         }
 
         // Determine the insert position for the new column
@@ -398,6 +502,14 @@ const App: React.FC = () => {
           rows: prev.rows - 1,
           columns: prev.columns + 1,
         }));
+        console.log(rowArrH.current+"row from row - col before");
+        console.log(colArrH.current+"col from row - col before");
+        const rowIndex=rowArrH.current.findIndex((each:number)=>each===rowNumber);
+        rowArrH.current.splice(rowIndex,1);
+        colArrH.current.push(rowNumber);
+        colArrH.current.sort((a, b) => a - b);
+        console.log(rowArrH.current+"row from row - col after");
+        console.log(colArrH.current+"col from row - col before");
         addLocalStorage("rows", inputData.rows - 1);
         addLocalStorage("columns", inputData.columns + 1);
       }
@@ -412,8 +524,11 @@ const App: React.FC = () => {
         const colToAdd = gridRef.current.map((row: any) => row[index]); // Extract the column to add
         gridRef.current.forEach((row: any) => row.splice(index, 1)); // Remove the column
 
+        let colNumber=0;
+
         if (colToAdd[0] && typeof colToAdd[0].id === "string") {
           colToAdd[0].id = colToAdd[0].id.replace("A", "B"); // Ensure colToAdd[0].id is a string
+          colNumber=Number(colToAdd[0].id.replace("B",""));
         }
 
         // Determine the insert position for the new row
@@ -458,6 +573,14 @@ const App: React.FC = () => {
           rows: prev.rows + 1,
           columns: prev.columns - 1,
         }));
+        console.log(rowArrH.current+"row from col-row before");
+        console.log(colArrH.current+"col from col-row before");
+        const colIndex=colArrH.current.findIndex((each:number)=>each===colNumber);
+        colArrH.current.splice(colIndex,1);
+        rowArrH.current.push(colNumber);
+        rowArrH.current.sort((a, b) => a - b);
+        console.log(rowArrH.current+"row from col-row after");
+        console.log(colArrH.current+"col from col-row after");
         addLocalStorage("rows", inputData.rows + 1);
         addLocalStorage("columns", inputData.columns - 1);
       }
