@@ -1,38 +1,18 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useContext } from "react";
 import Input from "./Input";
 import { Button } from "@mui/material";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { ContextCreator } from "../Store/store";
 
 const LazyGrid=lazy(()=>import("./Grid"))
 
-interface Display {
-  handleOpen: (a: string) => void;
-  handleClose: () => void;
-  handleForm: (e:any) => void;
-  handleChange: (cell: string, index: number) => void;
-  handleReset: () => void;
-  moveBlock: (id:string,toCol:number,toRow:number) => void;
-  addItem: (s: string,n:number) => void;
-  items:{};
-  grid: any;
-  open:{
-    new:boolean,
-    update:boolean
-  }
-}
-const DisplayGrid: React.FC<Display> = ({
-  handleOpen,
-  handleClose,
-  handleForm,
-  grid,
-  handleReset,
-  handleChange,
-  moveBlock,
-  addItem,
-  items,
-  open
-}) => {
-  const itemsArr=Object.keys(items).map((each:string)=>each.split("_")[0]);
+const DisplayGrid: React.FC = () => {
+  const {handleChange,handleClose,handleForm,handleOpen,handleReset,moveBlock,addItem,gridRef,blockRef,open}=useContext(ContextCreator);
+  const itemsArr=Object.keys(blockRef.current).map((each:string)=>each.split("_")[0]);
   return (
+
+    <DndProvider backend={HTML5Backend}>
     <div
       style={{
         display: "flex",
@@ -50,7 +30,7 @@ const DisplayGrid: React.FC<Display> = ({
       <Button
         variant="outlined"
         onClick={() => handleOpen("new")}
-        disabled={grid.length > 0}
+        disabled={gridRef.current.length > 0}
         style={{ marginBottom: "10px" }}
       >
         Create Grid
@@ -58,7 +38,7 @@ const DisplayGrid: React.FC<Display> = ({
       <Button
         variant="outlined"
         onClick={() => handleOpen("update")}
-        disabled={grid.length === 0}
+        disabled={gridRef.current.length === 0}
         style={{ marginBottom: "20px" }}
       >
         Update Grid
@@ -66,7 +46,7 @@ const DisplayGrid: React.FC<Display> = ({
       <Button
         variant="outlined"
         onClick={handleReset}
-        disabled={grid.length === 0}
+        disabled={gridRef.current.length === 0}
         style={{ marginBottom: "20px" }}
       >
         Reset Grid
@@ -74,7 +54,7 @@ const DisplayGrid: React.FC<Display> = ({
 
       <Input open={open} handleClose={handleClose} handleForm={handleForm} />
 
-      {grid.length > 0 && (
+      {gridRef.current.length > 0 && (
         <div
           style={{
             display: "flex",
@@ -121,11 +101,12 @@ const DisplayGrid: React.FC<Display> = ({
             </Button>
           </div>
           <Suspense fallback={<h2 style={{color:"black"}}>Loading Grid...</h2>}>
-            <LazyGrid grid={grid} handleChange={handleChange} moveBlock={moveBlock} />
+            <LazyGrid />
           </Suspense>
         </div>
       )}
     </div>
+    </DndProvider>
   );
 };
 
