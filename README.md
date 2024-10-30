@@ -44,3 +44,57 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+
+-----------------------------------------------------------------------------------
+Functionalities:
+
+Add typescript to the existing application
+
+Add labels like a1 ... an and b1....bn to rows and columns respectively
+when user clicks on the label the row/column should switch to column/row
+Store the set configuration locally and load on reload
+
+Enable to user to edit the rows and columns after creation
+Do not loss the added block when row/colm conversion or grid updation - Done
+need to throw error when empty spaces are less than added blocks - Done
+add 1 more item - 3 blocks and it should in a group manner - Done
+
+Errors:
+
+When can't hold new blocks
+when grid can't hold active blocks on decrease of row/column
+when grid can't hold active blocks on conversion
+
+-------------------------------------------------------------------------------------
+
+Optimization:
+
+Changes done:
+
+1. Split components to have easy readability
+2. Maintaining Grid under Refs and removed the states of items, merge the sates of input fields (row, columns)
+3. Because of Grid ref, direct finding of missing blocks instead of comparison between current and previous grid.
+4. Removed count function and made calculations on existing blocks state.
+5. Lazy loading of the Grid component
+6. Missing blocks will be added to refs and upon changes it will executed by useEffect.
+7. Handle different functions for Create and Update of same input pop up display.
+8. AddItem function is invoked by type and number of blocks directly to avoid if statements.
+9. Optimized way of adding the blocks into grid for all 4 types (Previously item 4 has different if block)
+10. Reduced parsing of data by calling common function when need to set it on local storage
+11. useCallback hook is used to re-create the function only when the dependency changes.(handleGridCreate , handleUpdateGrid, findSpaces)
+12. Disabled the buttons with the help of existing block ref data instead of having separate items state.
+13. Handled headers of row and column to have consecutive +2 numbers using an array and find if any in between numbers are missed
+14. To avoid props drilling, useContentAPI hooks has been applied now.
+
+
+
+Still improve:
+1. Maintain all values of grid, blocks,rowRef,colRef together to have easy way of adding in local storage.
+2. Adding the rows/columns in a numeric sorting way
+3. Instead of separate way of handling conversion mechanism, still can be optimized
+4. Instead of alerting the users, we can use error messages on UI page.
+5. All local storages can be handled by creating cutom hooks
+6. Update with Redux instead of useContextAPI to avoid props drilling
+
+------------------------------------------------------------------------------------------
