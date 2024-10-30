@@ -14,11 +14,11 @@ export type MoveBlockFunction = (id: string, rowIndex: number, colIndex: number)
 interface CellProps {
   rowIndex: number;
   colIndex: number;
-  cell: CellType | null; // cell can be null if it's empty
+  cell: CellType | null; // cel l can be null if it's empty
   moveBlock: MoveBlockFunction;
 }
 
-const Cell: React.FC<CellProps> = React.memo(({ rowIndex, colIndex, cell, moveBlock }) => {
+const Cell: React.FC<CellProps> = ({ rowIndex, colIndex, cell, moveBlock }) => {
   const [{ isOver }, drop] = useDrop({
     accept: ItemType,
     drop: (item: { id: string }) => {
@@ -30,7 +30,7 @@ const Cell: React.FC<CellProps> = React.memo(({ rowIndex, colIndex, cell, moveBl
   });
 
   return (
-    <div
+    <div 
       ref={drop}
       style={{
         width: "60px",
@@ -45,6 +45,6 @@ const Cell: React.FC<CellProps> = React.memo(({ rowIndex, colIndex, cell, moveBl
       {cell && <Block id={cell.id} text={cell.text} />}
     </div>
   );
-});
+};
 
 export default Cell;

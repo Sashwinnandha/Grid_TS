@@ -1,13 +1,11 @@
-import { useContext } from "react";
+
 import Cell from "./Cell";
 import { Button, Grid } from "@mui/material";
-import { ContextCreator } from "../Store/store";
 
-const GridComp:React.FC=()=>{
-  const {gridRef,handleChange,moveBlock}=useContext(ContextCreator)
+const GridComp:React.FC<{  grid: any,handleChange: (cell: string, index: number) => void, moveBlock: (id:string,toCol:number,toRow:number) => void;}>=({grid,handleChange,moveBlock})=>{
     return(
        <div>
-         {gridRef.current.map((row: any, rowIndex: number) => (
+         {grid.map((row: any, rowIndex: number) => (
             <Grid item xs={12} key={rowIndex}>
               <Grid container justifyContent="center">
                 {row.map((cell: any, colIndex: number) => {

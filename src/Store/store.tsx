@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { CellType, MoveBlockFunction } from "../Components/Cell";
 
@@ -50,7 +50,7 @@ const defaultContext: ContextData = {
 export const ContextCreator=createContext<ContextData>(defaultContext)
 
 
-export const ContextProvider:React.FC<{children:any}>=({children})=>{
+export const ContextProvider:React.FC<{children:ReactNode}>=({children})=>{
     const [open, setOpen] = useState({
         new: false,
         update: false,
@@ -142,7 +142,7 @@ export const ContextProvider:React.FC<{children:any}>=({children})=>{
         addLocalStorage("grid", gridRef.current);
         setAction(null);
         setGridVersion((prev) => prev + 1);
-      }, [inputData.rows, inputData.columns]);
+      }, []);
     
       const findMissingOddNumbers = () => {
         let missingNumber: number = 0;
@@ -299,22 +299,22 @@ export const ContextProvider:React.FC<{children:any}>=({children})=>{
             }
           }
         }
-        
+           
         rowref.current = inputData.rows;
         colRef.current = inputData.columns;
         addLocalStorage("rowHeader", rowArrH.current);
         addLocalStorage("colHeader", colArrH.current);
         addLocalStorage("grid", gridRef.current);
         setAction(null);
-        setGridVersion((prev) => prev + 1);
-      }, [inputData.rows, inputData.columns]);
-    
+        setGridVersion((prev) => prev + 1); 
+      }, []);
+     
       //for 3 consecutive spaces
       const findSpaces = useCallback(() => {
         let find: any = [];
         for (let i = 0; i < inputData.rows; i++) {
           var count = 0;
-          for (let j = 0; j < inputData.columns; j++) {
+          for (let j = 0; j < inputData.columns; j++) {     
             if (gridRef.current[i][j] === null) {
               ++count;
             } else {
@@ -331,7 +331,7 @@ export const ContextProvider:React.FC<{children:any}>=({children})=>{
           }
         }
         return find;
-      }, [blockRef.current]);
+      }, []);
     
       const addItem = (itemType: string, add: number) => {
         let counts = Object.keys(blockRef.current).length + 1;
